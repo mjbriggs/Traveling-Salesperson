@@ -194,17 +194,18 @@ class PointLineView( QWidget ):
 
 class Proj5GUI( QMainWindow ):
 
-	def __init__( self ):
+	def __init__( self , mode):
 		super(Proj5GUI,self).__init__()
 
-		self.RED_STYLE	 = "background-color: rgb(255, 220, 220)"
-		self.PLAIN_STYLE = "background-color: rgb(255, 255, 255)"
-		self._MAX_SEED = 1000 
+		if mode != "test":
+			self.RED_STYLE	 = "background-color: rgb(255, 220, 220)"
+			self.PLAIN_STYLE = "background-color: rgb(255, 255, 255)"
+			self._MAX_SEED = 1000 
 
-		self._scenario = None
-		self.initUI()
-		self.solver = TSPSolver( self.view )
-		self.genParams = {'size':None,'seed':None,'diff':None}
+			self._scenario = None
+			self.initUI()
+			self.solver = TSPSolver( self.view )
+			self.genParams = {'size':None,'seed':None,'diff':None}
 
 
 	   
@@ -521,5 +522,5 @@ if __name__ == '__main__':
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
 	
 	app = QApplication(sys.argv)
-	w = Proj5GUI()
+	w = Proj5GUI("main")
 	sys.exit(app.exec())
