@@ -5,7 +5,7 @@ import random
 import signal
 import sys
 import time
-
+import cProfile
 
 from which_pyqt import PYQT_VER
 if PYQT_VER == 'PYQT5':
@@ -27,6 +27,7 @@ else:
 # Import in the code with the actual implementation
 from TSPSolver import *
 from TSPClasses import *
+from PyQt5.QtWidgets import QApplication
 
 
 class PointLineView( QWidget ):
@@ -281,6 +282,10 @@ class Proj5GUI( QMainWindow ):
 		else:
 			self.statusBar.showMessage('No Solution Found.')
 		self.view.repaint()
+		# cp.disable()
+		# cp.print_stats(sort='time')
+
+
 
 
 	def randSeedClicked(self):
@@ -516,11 +521,12 @@ class Proj5GUI( QMainWindow ):
 		pass
 
 
-
 if __name__ == '__main__':
 	# This line allows CNTL-C in the terminal to kill the program
 	signal.signal(signal.SIGINT, signal.SIG_DFL)
-	
+
+	# cp = cProfile.Profile()
+	# cp.enable()
 	app = QApplication(sys.argv)
 	w = Proj5GUI("main")
 	sys.exit(app.exec())

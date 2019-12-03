@@ -88,15 +88,14 @@ class TSPSolver:
 		results = {}
 		cities = self._scenario.getCities()
 		ncities = len(cities)
-		foundTour = False
 		count = 0
-		bssf = None
+		bssf = TSPSolution(cities)
 		start_time = time.time()
 		startIndex = 0
 		startCity = cities[startIndex]
 		currentCity = startCity
 		route = []
-		while not foundTour and time.time()-start_time < time_allowance and startIndex < len(cities) - 1:
+		while time.time()-start_time < time_allowance and startIndex < len(cities) - 1:				# iterates through every greedy solution and keeps the best one O(n^2)
 			next = None
 
 			for city in cities:
@@ -115,19 +114,18 @@ class TSPSolver:
 				route.append(next)
 				currentCity = next
 				if len(route) == ncities:
-					bssf = TSPSolution(route)
-					count += 1
-					if bssf.cost < np.inf:
+					potential_bssf = TSPSolution(route)
+					if potential_bssf.cost < bssf.cost:
 						# Found a valid route
-						foundTour = True
-					else:
-						startIndex += 1
-						currentCity = cities[startIndex]
-						route = []
+						bssf = TSPSolution(route)
+						count += 1
+					startIndex += 1
+					currentCity = cities[startIndex]
+					route = []
 			
 		end_time = time.time()
-		self.greedyRoute = route
-		results['cost'] = bssf.cost if foundTour else math.inf
+		self.greedyRoute = bssf.route
+		results['cost'] = bssf.cost
 		results['time'] = end_time - start_time
 		results['count'] = count
 		results['soln'] = bssf
@@ -170,78 +168,47 @@ class TSPSolver:
 		maxHeapSize = 1
 		totalStates = 1
 		prunedStates = 0
-		while (time.time()-start_time) < time_allowance and len(heap) > 0:
-		# while len(heap) > 0:
-			if len(heap) > maxHeapSize:
-				maxHeapSize = len(heap)
+		print("starting b&b")
+		while (time.time()-start_time) < time_allowance and len(heap) > 0:					# searches state while there are potentially better paths, worst case O(n!), but approximates to O(n^k), where k = total states - pruned states
+			if len(heap) > maxHeapSize:														# if current heapsize is greater than max size so far, set max size 
+				maxHeapSize = len(heap)														# so far to current heap size
 
-			print(len(heap), " items remaining in heap")
-			currentState = heappop(heap)
-			if currentState.bestCost < bssf.cost:
-				if len(currentState.path) == len(cities):
-					# if currentState.bestCost < bssf.cost:
+			currentState = heappop(heap)													# pop best potential solution off queue
+			if currentState.bestCost < bssf.cost:											# if the state cost is potentially better than current cost, continue
+				if len(currentState.path) == len(cities):									# if every city is in the path, verify that the path is a cycle
 					lastCost = currentState.path[-1].costTo(currentState.path[0])
 					currentState.bestCost += lastCost
-					if currentState.bestCost < bssf.cost:
-						bssf = TSPSolution(currentState.path)
+					if currentState.bestCost < bssf.cost:									# if state path is a cycle, set best cost and best path to state path and cost
+						bssf = TSPSolution(deepcopy(currentState.path))
+						count += 1
 				else:
 					for city in cities:
-						totalStates += 1
-						if not currentState.inPath(city):
-							newPath = deepcopy(currentState.path)
+						if not currentState.inPath(city):									# visit every city that has not been visited by the current path
+							totalStates += 1
+							newPath = currentState.path.copy()
 							newPath.append(city)
-							newState = TSPState(newPath, cities, deepcopy(currentState.bestCost))
-							newState.costMatrix = deepcopy(currentState.costMatrix)
-							newState.coveredCols = deepcopy(currentState.coveredCols)
-							newState.coveredRows = deepcopy(currentState.coveredRows)
+							newState = TSPState(newPath, cities, currentState.bestCost)
+							newState.costMatrix = np.copy(currentState.costMatrix)
 							city1 = newState.path[newState.len() - 2]
 							city2 = newState.path[newState.len() - 1]
 							newState.coverCities(city1._index, city2._index)
 							newState.reduceMatrix()
-							if newState.bestCost < bssf.cost:
+							if newState.bestCost < bssf.cost:								# if state is potentially better than current best, push onto heap, else, prune state
 								heappush(heap, newState)
 							else:
 								prunedStates += 1
-						else:
-							prunedStates += 1
-			else:
-				prunedStates += 1
-		# 	next = None
-
-		# 	for city in cities:
-		# 		if city != currentCity and city not in route:
-		# 			if next == None and currentCity.costTo(city) != np.inf:
-		# 				next = city
-		# 			elif next != None:
-		# 				if currentCity.costTo(city) < currentCity.costTo(next):
-		# 					next = city
-
-		# 	if next == None:
-		# 		startIndex += 1
-		# 		currentCity = cities[startIndex]
-		# 		route = []
-		# 	else:
-		# 		route.append(next)
-		# 		currentCity = next
-		# 		if len(route) == ncities:
-		# 			bssf = TSPSolution(route)
-		# 			count += 1
-		# 			if bssf.cost < np.inf:
-		# 				# Found a valid route
-		# 				foundTour = True
-		# 			else:
-		# 				startIndex += 1
-		# 				currentCity = cities[startIndex]
-		# 				route = []
+			else:																			# if state cost is worse than best cost, prune state				
+				prunedStates += 1			
 			
 		end_time = time.time()
+		print("ending b&b")
 		results['cost'] = bssf.cost if foundTour else math.inf
 		results['time'] = end_time - start_time
 		results['count'] = count
 		results['soln'] = bssf
 		results['max'] = maxHeapSize
 		results['total'] = totalStates
-		results['pruned'] = prunedStates
+		results['pruned'] = prunedStates + len(heap)
 		return results
 
 
