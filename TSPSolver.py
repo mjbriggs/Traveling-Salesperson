@@ -14,8 +14,11 @@ else:
 import time
 import numpy as np
 from TSPClasses import *
+from TSPState import TSPState
 import heapq
 import itertools
+from heapq import heappop, heappush
+from copy import deepcopy
 
 
 
@@ -123,6 +126,7 @@ class TSPSolver:
 						route = []
 			
 		end_time = time.time()
+		self.greedyRoute = route
 		results['cost'] = bssf.cost if foundTour else math.inf
 		results['time'] = end_time - start_time
 		results['count'] = count
@@ -144,7 +148,101 @@ class TSPSolver:
 	'''
 		
 	def branchAndBound( self, time_allowance=60.0 ):
-		pass
+		results = {}
+		cities = self._scenario.getCities()
+		ncities = len(cities)
+		foundTour = False
+		count = 0
+		bssf = None
+		startIndex = 0
+		startCity = cities[startIndex]
+		currentCity = startCity
+		self.greedy()
+		route = self.greedyRoute
+		bssf = TSPSolution(route)
+		foundTour = True
+		heap = []
+		iState = TSPState([cities[0]], cities, 0)
+		iState.initMatrix()
+		iState.reduceMatrix()
+		heappush(heap, iState)
+		start_time = time.time()
+		maxHeapSize = 1
+		totalStates = 1
+		prunedStates = 0
+		while (time.time()-start_time) < time_allowance and len(heap) > 0:
+		# while len(heap) > 0:
+			if len(heap) > maxHeapSize:
+				maxHeapSize = len(heap)
+
+			print(len(heap), " items remaining in heap")
+			currentState = heappop(heap)
+			if currentState.bestCost < bssf.cost:
+				if len(currentState.path) == len(cities):
+					# if currentState.bestCost < bssf.cost:
+					lastCost = currentState.path[-1].costTo(currentState.path[0])
+					currentState.bestCost += lastCost
+					if currentState.bestCost < bssf.cost:
+						bssf = TSPSolution(currentState.path)
+				else:
+					for city in cities:
+						totalStates += 1
+						if not currentState.inPath(city):
+							newPath = deepcopy(currentState.path)
+							newPath.append(city)
+							newState = TSPState(newPath, cities, deepcopy(currentState.bestCost))
+							newState.costMatrix = deepcopy(currentState.costMatrix)
+							newState.coveredCols = deepcopy(currentState.coveredCols)
+							newState.coveredRows = deepcopy(currentState.coveredRows)
+							city1 = newState.path[newState.len() - 2]
+							city2 = newState.path[newState.len() - 1]
+							newState.coverCities(city1._index, city2._index)
+							newState.reduceMatrix()
+							if newState.bestCost < bssf.cost:
+								heappush(heap, newState)
+							else:
+								prunedStates += 1
+						else:
+							prunedStates += 1
+			else:
+				prunedStates += 1
+		# 	next = None
+
+		# 	for city in cities:
+		# 		if city != currentCity and city not in route:
+		# 			if next == None and currentCity.costTo(city) != np.inf:
+		# 				next = city
+		# 			elif next != None:
+		# 				if currentCity.costTo(city) < currentCity.costTo(next):
+		# 					next = city
+
+		# 	if next == None:
+		# 		startIndex += 1
+		# 		currentCity = cities[startIndex]
+		# 		route = []
+		# 	else:
+		# 		route.append(next)
+		# 		currentCity = next
+		# 		if len(route) == ncities:
+		# 			bssf = TSPSolution(route)
+		# 			count += 1
+		# 			if bssf.cost < np.inf:
+		# 				# Found a valid route
+		# 				foundTour = True
+		# 			else:
+		# 				startIndex += 1
+		# 				currentCity = cities[startIndex]
+		# 				route = []
+			
+		end_time = time.time()
+		results['cost'] = bssf.cost if foundTour else math.inf
+		results['time'] = end_time - start_time
+		results['count'] = count
+		results['soln'] = bssf
+		results['max'] = maxHeapSize
+		results['total'] = totalStates
+		results['pruned'] = prunedStates
+		return results
 
 
 

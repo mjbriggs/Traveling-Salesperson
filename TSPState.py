@@ -31,45 +31,61 @@ class TSPState:
     def __str__(self):
         return str(self.costMatrix)
     
+    def len(self):
+        return len(self.path)
+    
+    def inPath(self, city):
+        for val in self.path:
+            if val._index == city._index:
+                return True
+        return False
+    
     def setMatrix(self, matrix):
         self.costMatrix = matrix
 
     def coverCities(self, fromCity, toCity):
-        self.infRow(fromCity)
-        self.infCol(toCity)
-        self.infPair(fromCity, toCity)
+        self.bestCost += self.costMatrix[fromCity][toCity]
+        if self.bestCost != np.inf:
+            self.infRow(fromCity)
+            self.infCol(toCity)
+            self.infPair(fromCity, toCity)
 
     def reduceMatrix(self):
-        self.reduceMatrixRows()
-        self.reduceMatrixCols()
+        if self.bestCost != np.inf:
+            self.reduceMatrixRows()
+            self.reduceMatrixCols()
     
     def reduceMatrixRows(self):
         for row in range(len(self.costMatrix)):
-            if row not in self.coveredRows:
-                min, minIndex = self.findRowMin(row)
-                if min is not np.inf and min is not 0:
-                    self.reduceRow(row, min, minIndex)
-                    self.bestCost += min
+            min, minIndex = self.findRowMin(row)
+            if min != np.inf and min > 0:
+                self.reduceRow(row, min, minIndex)
+                self.bestCost += min
     
     def reduceMatrixCols(self):
         for col in range(len(self.costMatrix[0])):
-            if col not in self.coveredCols:
-                min, minIndex = self.findColMin(col)
-                if min is not np.inf and min is not 0:
-                    self.reduceCol(col, min, minIndex)
-                    self.bestCost += min
+            min, minIndex = self.findColMin(col)
+            if min != np.inf and min > 0:
+                self.reduceCol(col, min, minIndex)
+                self.bestCost += min
         
     def reduceRow(self, row, min, minIndex):
         for col in range(len(self.costMatrix[row])):
             # if col != minIndex:
             newCost = self.costMatrix[row][col] - min
-            self.costMatrix[row, col] = newCost
+            if newCost == np.nan:
+                self.costMatrix[row][col] = np.inf
+            else:
+                self.costMatrix[row, col] = newCost
     
     def reduceCol(self, col, min, minIndex):
         for row in range(len(self.costMatrix)):
             # if row != minIndex:
             newCost = self.costMatrix[row][col] - min
-            self.costMatrix[row, col] = newCost
+            if newCost == np.nan:
+                self.costMatrix[row][col] = np.inf
+            else:
+                self.costMatrix[row, col] = newCost
 
     def findRowMin(self, row):
         min = self.costMatrix[row][0]
